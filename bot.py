@@ -13,6 +13,15 @@ dream_interpretations = {
     "نار": "النار قد تدل على الغضب أو التطهير."
 }
 
+# قاعدة بيانات بسيطة للرقية الشرعية (نص عام كمثال)
+ruqyah_texts = {
+    "1": "أعوذ بالله من الشيطان الرجيم. بسم الله الذي لا يضر مع اسمه شيء في الأرض ولا في السماء وهو السميع العليم.",
+    "2": "قُلْ هُوَ ٱللَّهُ أَحَدٌ، ٱللَّهُ ٱلصَّمَدُ، لَمْ يَلِدْ وَلَمْ يُولَدْ، وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌ."
+}
+
+# نص عام للاستشارات النسائية
+womens_consultation = "يرجى وصف مشكلتك أو استفسارك وسأحاول مساعدتك بأفضل طريقة ممكنة. يمكنك التواصل مع الإداري للحصول على استشارة خاصة."
+
 # دالة الترحيب مع قائمة أزرار
 async def start(update: Update, context):
     chat_id = update.effective_chat.id
@@ -20,8 +29,8 @@ async def start(update: Update, context):
     # إنشاء قائمة الأزرار
     keyboard = [
         [InlineKeyboardButton("تفسير الأحلام", callback_data='interpret_dream')],
-        [InlineKeyboardButton("تواصل معنا", callback_data='contact_us')],
-        [InlineKeyboardButton("معلومات إضافية", callback_data='more_info')]
+        [InlineKeyboardButton("الرقية الشرعية", callback_data='ruqyah')],
+        [InlineKeyboardButton("استشارات نسائية", callback_data='womens_consult')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -40,10 +49,11 @@ async def button(update: Update, context):
     
     if query.data == 'interpret_dream':
         await context.bot.send_message(chat_id=chat_id, text="أرسل لي وصف حلمك (مثل 'رأيت ماء' أو 'رأيت طيور') وسأحاول تفسيره!")
-    elif query.data == 'contact_us':
-        await context.bot.send_message(chat_id=chat_id, text="يمكنك التواصل معنا عبر هذا الرابط: [رابط الدعم]")
-    elif query.data == 'more_info':
-        await context.bot.send_message(chat_id=chat_id, text="معلومات إضافية: هذا البوت مخصص لتفسير الأحلام ومساعدتك!")
+    elif query.data == 'ruqyah':
+        ruqyah_text = "\n".join(ruqyah_texts.values())
+        await context.bot.send_message(chat_id=chat_id, text=f"الرقية الشرعية:\n{ruqyah_text}\nيرجى تلاوتها مع الإخلاص واستخارة الله.")
+    elif query.data == 'womens_consult':
+        await context.bot.send_message(chat_id=chat_id, text=womens_consultation)
 
 # دالة لتفسير الأحلام بناءً على الرسالة
 async def interpret_dream(update: Update, context):
