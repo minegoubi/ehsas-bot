@@ -5,7 +5,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 # إعداد التسجيل (Logging) لتتبع الأخطاء
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 # استرداد التوكن ومعرف الإداري من المتغيرات البيئية
@@ -105,7 +108,7 @@ async def error_handler(update: Update, context):
     if update:
         await update.effective_chat.send_message("حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى لاحقًا.")
 
-# إعداد وتشغيل البوت
+# دالة التشغيل الرئيسية
 async def main():
     try:
         application = Application.builder().token(BOT_TOKEN).build()
