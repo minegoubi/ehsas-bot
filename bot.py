@@ -7,6 +7,12 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 
+# التحقق من وجود المتغيرات البيئية
+if not BOT_TOKEN:
+    raise ValueError("يجب تعيين BOT_TOKEN في المتغيرات البيئية.")
+if not ADMIN_CHAT_ID:
+    raise ValueError("يجب تعيين ADMIN_CHAT_ID في المتغيرات البيئية.")
+
 # قاعدة بيانات بسيطة لتفسير الأحلام
 dream_interpretations = {
     "ماء": "الماء في الأحلام يرمز عادةً إلى العواطف أو التغيير.",
@@ -27,7 +33,6 @@ womens_consultation = "يرجى وصف مشكلتك أو استفسارك وسأ
 async def start(update: Update, context):
     chat_id = update.effective_chat.id
     
-    # إنشاء قائمة الأزرار
     keyboard = [
         [InlineKeyboardButton("تفسير الأحلام", callback_data='interpret_dream')],
         [InlineKeyboardButton("تواصل معنا", callback_data='contact_us')],
@@ -66,7 +71,6 @@ async def handle_message(update: Update, context):
     user_message = update.message.text.lower()
     chat_id = update.message.chat_id
     
-    # محاولة تفسير الحلم
     response = "عذرًا، لا يمكنني تفسير هذا الحلم الآن. حاول وصفًا آخر!"
     dream_interpreted = False
     for keyword, interpretation in dream_interpretations.items():
@@ -75,10 +79,8 @@ async def handle_message(update: Update, context):
             dream_interpreted = True
             break
     
-    # إرسال الرد للمستخدم
     await context.bot.send_message(chat_id=chat_id, text=response)
     
-    # إذا لم يتم تفسير الحلم، أرسل الرسالة إلى الإداري
     if not dream_interpreted:
         user_id = update.effective_user.id
         user_name = update.effective_user.first_name
@@ -93,34 +95,17 @@ async def unknown(update: Update, context):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="عذرًا، لم أفهم هذا الأمر.")
 
 # إعداد وتشغيل البوت
-async def main():
-    # التحقق من وجود التوكن
-    if not BOT_TOKEN:
-        print("خطأ: يجب تعيين BOT_TOKEN في المتغيرات البيئية.")
-        return
-    
-    if not ADMIN_CHAT_ID:
-        print("خطأ: يجب تعيين ADMIN_CHAT_ID في المتغيرات البيئية.")
-        return
-    
-    # إعداد البوت
+def run_bot():
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # إضافة المعالجات
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.COMMAND, unknown))
 
-    # بدء البوت
+    # بدء التشغيل
     print("بدء تشغيل البوت...")
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
-    print("البوت يعمل الآن!")
-
-    # الاستمرار في التشغيل حتى يتم إيقاف البوت
-    await asyncio.Event().wait()
+    application.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    run_bot()
