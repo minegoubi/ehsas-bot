@@ -111,6 +111,7 @@ async def error_handler(update: Update, context):
 # دالة التشغيل الرئيسية
 async def main():
     try:
+        # إنشاء تطبيق البوت
         application = Application.builder().token(BOT_TOKEN).build()
 
         # إضافة المعالجات
