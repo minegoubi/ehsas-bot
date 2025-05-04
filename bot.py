@@ -1,4 +1,5 @@
 import os
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
@@ -36,7 +37,6 @@ async def start(update: Update, context):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # إرسال الرسالة مع الأزرار
     await context.bot.send_message(
         chat_id=chat_id,
         text="مرحبًا! أنا بوت Ehsas. كيف يمكنني مساعدتك؟ اختر من الخيارات أدناه:",
@@ -61,44 +61,66 @@ async def button(update: Update, context):
     elif query.data == 'womens_consult':
         await context.bot.send_message(chat_id=chat_id, text=womens_consultation)
 
-# دالة لتفسير الأحلام بناءً على الرسالة
-async def interpret_dream(update: Update, context):
+# دالة لتفسير الأحلام بناءً على الرسالة وإرسالها للإداري إذا لم يتم التفسير
+async def handle_message(update: Update, context):
     user_message = update.message.text.lower()
     chat_id = update.message.chat_id
     
-    # البحث عن كلمة في قاعدة البيانات
+    # محاولة تفسير الحلم
     response = "عذرًا، لا يمكنني تفسير هذا الحلم الآن. حاول وصفًا آخر!"
+    dream_interpreted = False
     for keyword, interpretation in dream_interpretations.items():
         if keyword in user_message:
             response = interpretation
+            dream_interpreted = True
             break
     
+    # إرسال الرد للمستخدم
     await context.bot.send_message(chat_id=chat_id, text=response)
-
-# دالة لإرسال الرسائل إلى الإداري
-async def forward_to_admin(update: Update, context):
-    user_message = update.message.text
-    user_id = update.effective_user.id
-    user_name = update.effective_user.first_name
-    user_username = update.effective_user.username or "لا يوجد اسم مستخدم"
-    await context.bot.send_message(
-        chat_id=ADMIN_CHAT_ID,
-        text=f"رسالة جديدة من {user_name} (@{user_username}, ID: {user_id}):\n{user_message}"
-    )
+    
+    # إذا لم يتم تفسير الحلم، أرسل الرسالة إلى الإداري
+    if not dream_interpreted:
+        user_id = update.effective_user.id
+        user_name = update.effective_user.first_name
+        user_username = update.effective_user.username or "لا يوجد اسم مستخدم"
+        await context.bot.send_message(
+            chat_id=ADMIN_CHAT_ID,
+            text=f"رسالة جديدة من {user_name} (@{user_username}, ID: {user_id}):\n{user_message}"
+        )
 
 # دالة للرد على الأوامر غير المعروفة
 async def unknown(update: Update, context):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="عذرًا، لم أفهم هذا الأمر.")
 
-# إعداد البوت
-application = Application.builder().token(BOT_TOKEN).build()
+# إعداد وتشغيل البوت
+async def main():
+    # التحقق من وجود التوكن
+    if not BOT_TOKEN:
+        print("خطأ: يجب تعيين BOT_TOKEN في المتغيرات البيئية.")
+        return
+    
+    if not ADMIN_CHAT_ID:
+        print("خطأ: يجب تعيين ADMIN_CHAT_ID في المتغيرات البيئية.")
+        return
+    
+    # إعداد البوت
+    application = Application.builder().token(BOT_TOKEN).build()
 
-# إضافة المعالجات
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CallbackQueryHandler(button))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, interpret_dream))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_to_admin))
-application.add_handler(MessageHandler(filters.COMMAND, unknown))
+    # إضافة المعالجات
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.COMMAND, unknown))
 
-# بدء البوت
-application.run_polling()
+    # بدء البوت
+    print("بدء تشغيل البوت...")
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    print("البوت يعمل الآن!")
+
+    # الاستمرار في التشغيل حتى يتم إيقاف البوت
+    await asyncio.Event().wait()
+
+if __name__ == "__main__":
+    asyncio.run(main())
