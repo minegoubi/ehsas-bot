@@ -1,7 +1,12 @@
 import os
 import asyncio
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+
+# إعداد التسجيل (Logging) لتتبع الأخطاء
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # استرداد التوكن ومعرف الإداري من المتغيرات البيئية
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -94,18 +99,37 @@ async def handle_message(update: Update, context):
 async def unknown(update: Update, context):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="عذرًا، لم أفهم هذا الأمر.")
 
+# دالة لمعالجة الأخطاء
+async def error_handler(update: Update, context):
+    logger.error(f"حدث خطأ: {context.error}")
+    if update:
+        await update.effective_chat.send_message("حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى لاحقًا.")
+
 # إعداد وتشغيل البوت
-def run_bot():
-    application = Application.builder().token(BOT_TOKEN).build()
+async def main():
+    try:
+        application = Application.builder().token(BOT_TOKEN).build()
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(MessageHandler(filters.COMMAND, unknown))
+        # إضافة المعالجات
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CallbackQueryHandler(button))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        application.add_handler(MessageHandler(filters.COMMAND, unknown))
+        application.add_error_handler(error_handler)
 
-    # بدء التشغيل
-    print("بدء تشغيل البوت...")
-    application.run_polling()
+        # بدء التشغيل
+        logger.info("بدء تشغيل البوت...")
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
+        logger.info("البوت يعمل الآن!")
+
+        # الاستمرار في التشغيل
+        await asyncio.Event().wait()
+
+    except Exception as e:
+        logger.error(f"فشل تشغيل البوت: {e}")
+        raise
 
 if __name__ == "__main__":
-    run_bot()
+    asyncio.run(main())
