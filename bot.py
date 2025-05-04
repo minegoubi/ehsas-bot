@@ -1,17 +1,12 @@
-import telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 # استرداد التوكن ومعرف الإداري من المتغيرات البيئية
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 
-# إعداد البوت
-updater = Updater(token=BOT_TOKEN, use_context=True)
-dispatcher = updater.dispatcher
-
-# قاعدة بيانات بسيطة لتفسير الأحلام (يمكن توسيعها)
+# قاعدة بيانات بسيطة لتفسير الأحلام
 dream_interpretations = {
     "ماء": "الماء في الأحلام يرمز عادةً إلى العواطف أو التغيير.",
     "طيور": "الطيور تشير إلى الحرية أو الأمل.",
@@ -19,7 +14,7 @@ dream_interpretations = {
 }
 
 # دالة الترحيب مع قائمة أزرار
-def start(update, context):
+async def start(update: Update, context):
     chat_id = update.effective_chat.id
     
     # إنشاء قائمة الأزرار
@@ -31,27 +26,27 @@ def start(update, context):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     # إرسال الرسالة مع الأزرار
-    context.bot.send_message(
+    await context.bot.send_message(
         chat_id=chat_id,
         text="مرحبًا! أنا بوت Ehsas. كيف يمكنني مساعدتك؟ اختر من الخيارات أدناه:",
         reply_markup=reply_markup
     )
 
 # دالة لمعالجة النقر على الأزرار
-def button(update, context):
+async def button(update: Update, context):
     query = update.callback_query
-    query.answer()
+    await query.answer()
     chat_id = query.message.chat_id
     
     if query.data == 'interpret_dream':
-        context.bot.send_message(chat_id=chat_id, text="أرسل لي وصف حلمك (مثل 'رأيت ماء' أو 'رأيت طيور') وسأحاول تفسيره!")
+        await context.bot.send_message(chat_id=chat_id, text="أرسل لي وصف حلمك (مثل 'رأيت ماء' أو 'رأيت طيور') وسأحاول تفسيره!")
     elif query.data == 'contact_us':
-        context.bot.send_message(chat_id=chat_id, text="يمكنك التواصل معنا عبر هذا الرابط: [رابط الدعم]")
+        await context.bot.send_message(chat_id=chat_id, text="يمكنك التواصل معنا عبر هذا الرابط: [رابط الدعم]")
     elif query.data == 'more_info':
-        context.bot.send_message(chat_id=chat_id, text="معلومات إضافية: هذا البوت مخصص لتفسير الأحلام ومساعدتك!")
+        await context.bot.send_message(chat_id=chat_id, text="معلومات إضافية: هذا البوت مخصص لتفسير الأحلام ومساعدتك!")
 
 # دالة لتفسير الأحلام بناءً على الرسالة
-def interpret_dream(update, context):
+async def interpret_dream(update: Update, context):
     user_message = update.message.text.lower()
     chat_id = update.message.chat_id
     
@@ -62,11 +57,32 @@ def interpret_dream(update, context):
             response = interpretation
             break
     
-    context.bot.send_message(chat_id=chat_id, text=response)
+    await context.bot.send_message(chat_id=chat_id, text=response)
 
 # دالة لإرسال الرسائل إلى الإداري
-def forward_to_admin(update, context):
+async def forward_to_admin(update: Update, context):
     user_message = update.message.text
     user_id = update.effective_user.id
     user_name = update.effective_user.first_name
-    user_username = update.effective_user.username or "لا يوجد اسم مستخدم
+    user_username = update.effective_user.username or "لا يوجد اسم مستخدم"
+    await context.bot.send_message(
+        chat_id=ADMIN_CHAT_ID,
+        text=f"رسالة جديدة من {user_name} (@{user_username}, ID: {user_id}):\n{user_message}"
+    )
+
+# دالة للرد على الأوامر غير المعروفة
+async def unknown(update: Update, context):
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="عذرًا، لم أفهم هذا الأمر.")
+
+# إعداد البوت
+application = Application.builder().token(BOT_TOKEN).build()
+
+# إضافة المعالجات
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CallbackQueryHandler(button))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, interpret_dream))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, forward_to_admin))
+application.add_handler(MessageHandler(filters.COMMAND, unknown))
+
+# بدء البوت
+application.run_polling()
