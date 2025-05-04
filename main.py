@@ -1,4 +1,10 @@
-from bot import *
-from keep_alive import keep_alive
+from flask import Flask
 
-keep_alive()
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "البوت يعمل!"
+
+if __name__ == "__main__":
+    app.run()
